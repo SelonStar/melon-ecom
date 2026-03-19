@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.melonecom.mapper.OrderMapper">
+
+    <select id="selectByOrderNo" resultType="com.melonecom.model.entity.Order">
+        SELECT
+            id           AS orderId,
+            order_no     AS orderNo,
+            user_id      AS userId,
+            status       AS status,
+            total_amount AS totalAmount,
+            pay_time     AS payTime,
+            create_time  AS createTime,
+            update_time  AS updateTime
+        FROM tb_order
+        WHERE order_no = #{orderNo}
+        LIMIT 1
+    </select>
+
+    <select id="selectByUserId" resultType="com.melonecom.model.entity.Order">
+        SELECT
+            id           AS orderId,
+            order_no     AS orderNo,
+            user_id      AS userId,
+            status       AS status,
+            total_amount AS totalAmount,
+            pay_time     AS payTime,
+            create_time  AS createTime,
+            update_time  AS updateTime
+        FROM tb_order
+        WHERE user_id = #{userId}
+        ORDER BY create_time DESC, id DESC
+    </select>
+
+    <!-- 状态机安全更新：未支付(0) -> 已支付(1) -->
+    <update id="markPaid">
+        UPDATE tb_order
+        SET status = 1,
+            pay_time = #{payTime}
+        WHERE order_no = #{orderNo}
+          AND status = 0
+    </update>
+
+    <!-- 取消未支付订单：0 -> 2 -->
+    <update id="cancelUnpaid">
+        UPDATE tb_order
+        SET status = 2
+        WHERE order_no = #{orderNo}
+          AND status = 0
+    </update>
+
+    <!-- 批量取消超时未支付订单 -->
+    <update id="cancelTimeoutUnpaid">
+        UPDATE tb_order
+        SET status = 2
+        WHERE status = 0
+          AND create_time &lt; #{beforeTime}
+
+    </update>
+
+</mapper>

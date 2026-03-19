@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.melonecom.mapper.ProductMapper">
+
+    <resultMap id="ProductAdminVOMap" type="com.melonecom.model.vo.ProductAdminVO">
+        <id column="productId" property="productId"/>
+        <result column="name" property="name"/>
+        <result column="sub_title" property="subTitle"/>
+        <result column="brand_id" property="brandId"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="main_image_url" property="mainImageUrl"/>
+        <result column="status" property="status"/>
+        <result column="minPrice" property="minPrice"/>
+        <result column="ratingAvg" property="ratingAvg"/>
+        <result column="commentCount" property="commentCount"/>
+        <result column="salesCount" property="salesCount"/>
+    </resultMap>
+
+    <sql id="ProductWhere">
+        <where>
+            <if test="status != null">
+                p.status = #{status}
+            </if>
+            <if test="categoryId != null">
+                <if test="status != null">AND</if>
+                p.category_id = #{categoryId}
+            </if>
+            <if test="brandId != null">
+                <if test="status != null or categoryId != null">AND</if>
+                p.brand_id = #{brandId}
+            </if>
+            <if test="keywordList != null and keywordList.size() > 0">
+                <if test="status != null or categoryId != null or brandId != null">AND</if>
+                <trim prefix="(" suffix=")" prefixOverrides="OR">
+                    <foreach collection="keywordList" item="keyword">
+                        <if test="keyword != null and keyword.trim() != ''">
+                            OR p.name LIKE CONCAT('%', #{keyword}, '%')
+                            OR p.sub_title LIKE CONCAT('%', #{keyword}, '%')
+                        </if>
+                    </foreach>
+                </trim>
+            </if>
+        </where>
+    </sql>
+
+    <select id="countProducts" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM tb_product p
+        <include refid="ProductWhere"/>
+    </select>
+
+    <select id="selectProductsPage" resultMap="ProductAdminVOMap">
+        SELECT p.id AS productId,
+               p.name,
+               p.sub_title,
+               p.brand_id,
+               p.category_id,
+               p.main_image_url,
+               p.status,
+               p.rating_avg AS ratingAvg,
+               p.comment_count AS commentCount,
+               p.sales_count AS salesCount,
+               COALESCE(s.min_price, 0) AS minPrice
+        FROM tb_product p
+        LEFT JOIN (
+            SELECT product_id,
+                   COALESCE(MIN(CASE WHEN status = 1 THEN price END), MIN(price)) AS min_price
+            FROM tb_sku
+            GROUP BY product_id
+        ) s ON s.product_id = p.id
+        <include refid="ProductWhere"/>
+        ORDER BY p.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <update id="increaseSalesCount">
+        UPDATE tb_product
+        SET sales_count = sales_count + #{quantity},
+            update_time = NOW()
+        WHERE id = #{productId}
+    </update>
+
+    <update id="incrProductCommentStats">
+        UPDATE tb_product
+        SET comment_count = comment_count + #{deltaCount},
+            rating_count  = rating_count + #{deltaCount},
+            rating_sum    = rating_sum + #{deltaRatingSum}
+        WHERE id = #{productId}
+          AND (comment_count + #{deltaCount}) >= 0
+          AND (rating_count + #{deltaCount}) >= 0
+          AND (rating_sum + #{deltaRatingSum}) >= 0
+    </update>
+</mapper>

@@ -1,0 +1,42 @@
+# ===== Java =====
+target/
+*.log
+*.class
+
+# Vue / Node
+node_modules/
+dist/
+.vite/
+
+
+# ===== Maven =====
+.mvn/
+mvnw
+mvnw.cmd
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.iml
+
+# ===== OS =====
+.DS_Store
+
+# ===== Env =====
+.env
+.env.*
+application.yml
+application-dev.yml
+
+# Upload / storage
+uploads/
+static/uploads/
+minio-data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ===== Runtime Data =====
+Minio/data/
+Minio/bin/

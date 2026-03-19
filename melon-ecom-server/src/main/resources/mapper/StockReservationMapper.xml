@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.melonecom.mapper.StockReservationMapper">
+
+    <select id="selectExpiredLocked" resultType="com.melonecom.model.entity.StockReservation">
+        SELECT
+            id            AS reservationId,
+            order_no      AS orderNo,
+            sku_id        AS skuId,
+            warehouse_id  AS warehouseId,
+            qty           AS qty,
+            status        AS status,
+            expire_at     AS expireAt
+        FROM tb_stock_reservation
+        WHERE status = 0
+          AND expire_at <![CDATA[ <= ]]> #{now}
+        ORDER BY expire_at ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="markReleasedIfLocked">
+        UPDATE tb_stock_reservation
+        SET status = 1,
+            update_time = #{now}
+        WHERE id = #{reservationId}
+          AND status = 0
+    </update>
+
+</mapper>

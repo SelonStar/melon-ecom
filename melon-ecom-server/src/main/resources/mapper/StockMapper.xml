@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.melonecom.mapper.StockMapper">
+
+    <resultMap id="StockMap" type="com.melonecom.model.entity.Stock">
+        <id     column="id"            property="stockId"/>
+        <result column="warehouse_id"  property="warehouseId"/>
+        <result column="sku_id"        property="skuId"/>
+        <result column="available"     property="available"/>
+        <result column="locked"        property="locked"/>
+        <result column="version"       property="version"/>
+        <result column="create_time"   property="createTime"/>
+        <result column="update_time"   property="updateTime"/>
+    </resultMap>
+
+    <!-- 你的规则：业务当单仓用 => 每个 sku 只会在 tb_stock 出现 1 行 -->
+    <select id="selectWarehouseIdBySkuId" resultType="java.lang.Long">
+        SELECT warehouse_id
+        FROM tb_stock
+        WHERE sku_id = #{skuId}
+        LIMIT 1
+    </select>
+
+    <select id="selectByWarehouseAndSku" resultMap="StockMap">
+        SELECT id, warehouse_id, sku_id, available, locked, version, create_time, update_time
+        FROM tb_stock
+        WHERE warehouse_id = #{warehouseId}
+          AND sku_id = #{skuId}
+        LIMIT 1
+    </select>
+
+    <insert id="insertStock" parameterType="com.melonecom.model.entity.Stock"
+            useGeneratedKeys="true" keyProperty="stockId">
+        INSERT INTO tb_stock (warehouse_id, sku_id, available, locked, version, create_time, update_time)
+        VALUES (#{warehouseId}, #{skuId}, #{available}, #{locked}, #{version}, NOW(), NOW())
+    </insert>
+
+    <select id="countStocks" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM tb_stock
+        WHERE (#{skuId} IS NULL OR sku_id = #{skuId})
+          AND (#{warehouseId} IS NULL OR warehouse_id = #{warehouseId})
+    </select>
+
+    <select id="selectStocksPage" resultMap="StockMap">
+        SELECT id, warehouse_id, sku_id, available, locked, version, create_time, update_time
+        FROM tb_stock
+        WHERE (#{skuId} IS NULL OR sku_id = #{skuId})
+          AND (#{warehouseId} IS NULL OR warehouse_id = #{warehouseId})
+        ORDER BY id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 乐观锁 + 不允许 available 变负 -->
+    <update id="updateAvailableWithOptimisticLock">
+        UPDATE tb_stock
+        SET available = available + #{delta},
+            version = version + 1,
+            update_time = NOW()
+        WHERE id = #{stockId}
+          AND version = #{version}
+          AND (available + #{delta}) >= 0
+    </update>
+
+    <!-- 乐观锁 + available/locked 都不允许变负 -->
+    <update id="updateAvailableAndLockedWithOptimisticLock">
+        UPDATE tb_stock
+        SET available = available + #{deltaAvailable},
+            locked = locked + #{deltaLocked},
+            version = version + 1,
+            update_time = NOW()
+        WHERE id = #{stockId}
+          AND version = #{version}
+          AND (available + #{deltaAvailable}) >= 0
+          AND (locked + #{deltaLocked}) >= 0
+    </update>
+
+    <update id="decreaseAvailableByWarehouseAndSku">
+        UPDATE tb_stock
+        SET available = available - #{quantity},
+            update_time = NOW()
+        WHERE warehouse_id = #{warehouseId}
+          AND sku_id = #{skuId}
+          AND available >= #{quantity}
+    </update>
+
+</mapper>

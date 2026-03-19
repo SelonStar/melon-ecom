@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.melonecom.mapper.SkuMapper">
+
+    <select id="selectSkusByProductId" resultType="com.melonecom.model.entity.Sku">
+        SELECT id AS skuId, product_id AS productId, sku_code AS skuCode, name, spec_json AS specJson,
+               price, cost_price AS costPrice, stock, sales_count AS salesCount, image_url AS imageUrl,
+               ai_tryon_enabled AS aiTryonEnabled, tryon_category AS tryonCategory,
+               tryon_image_url AS tryonImageUrl, tryon_mask_url AS tryonMaskUrl,
+               tryon_sort AS tryonSort,
+               weight, status, create_time AS createTime, update_time AS updateTime
+        FROM tb_sku
+        WHERE product_id = #{productId}
+        ORDER BY id ASC
+    </select>
+
+    <select id="existsSkuCode" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM tb_sku
+        WHERE sku_code = #{skuCode}
+        <if test="excludeId != null">
+            AND id <![CDATA[ <> ]]> #{excludeId}
+        </if>
+    </select>
+
+    <select id="selectMockOrderSkuCandidates" resultType="com.melonecom.model.vo.MockOrderSkuCandidateVO">
+        SELECT s.id AS skuId,
+               s.product_id AS productId,
+               st.warehouse_id AS warehouseId,
+               s.price AS price,
+               st.available AS available
+        FROM tb_sku s
+        INNER JOIN tb_product p ON p.id = s.product_id
+        INNER JOIN tb_stock st ON st.sku_id = s.id
+        WHERE p.status = 1
+          AND s.status = 1
+          AND st.available > 0
+        ORDER BY s.id ASC
+    </select>
+
+    <update id="increaseSalesCount">
+        UPDATE tb_sku
+        SET sales_count = sales_count + #{quantity},
+            stock = CASE
+                        WHEN stock >= #{quantity} THEN stock - #{quantity}
+                        ELSE 0
+                    END,
+            update_time = NOW()
+        WHERE id = #{skuId}
+    </update>
+
+    <select id="countTryOnCandidateSkus" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM tb_sku s
+        INNER JOIN tb_product p ON p.id = s.product_id
+        WHERE p.status = 1
+          AND s.status = 1
+          AND s.ai_tryon_enabled = 1
+          AND s.tryon_category = #{slotType}
+        <if test="keyword != null and keyword != ''">
+            AND (
+                p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR p.sub_title LIKE CONCAT('%', #{keyword}, '%')
+                OR s.name LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+    </select>
+
+    <select id="selectTryOnCandidateSkus" resultType="com.melonecom.model.vo.TryOnCandidateSkuVO">
+        SELECT s.id AS skuId,
+               s.product_id AS productId,
+               p.name AS productName,
+               p.sub_title AS productSubTitle,
+               s.name AS skuName,
+               COALESCE(s.image_url, p.main_image_url) AS imageUrl,
+               s.tryon_image_url AS tryOnImageUrl,
+               s.tryon_category AS tryOnCategory,
+               s.price AS price,
+               s.stock AS stock,
+               s.tryon_sort AS tryOnSort
+        FROM tb_sku s
+        INNER JOIN tb_product p ON p.id = s.product_id
+        WHERE p.status = 1
+          AND s.status = 1
+          AND s.ai_tryon_enabled = 1
+          AND s.tryon_category = #{slotType}
+        <if test="keyword != null and keyword != ''">
+            AND (
+                p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR p.sub_title LIKE CONCAT('%', #{keyword}, '%')
+                OR s.name LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY COALESCE(s.tryon_sort, 999999) ASC, s.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+</mapper>

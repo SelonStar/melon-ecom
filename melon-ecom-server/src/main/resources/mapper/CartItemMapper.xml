@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.melonecom.mapper.CartItemMapper">
+
+    <select id="selectByUserId" resultType="com.melonecom.model.entity.CartItem">
+        SELECT id        AS cartItemId,
+               user_id   AS userId,
+               sku_id    AS skuId,
+               quantity  AS quantity,
+               checked   AS checked,
+               create_time AS createTime,
+               update_time AS updateTime
+        FROM tb_cart_item
+        WHERE user_id = #{userId}
+        ORDER BY update_time DESC, id DESC
+    </select>
+
+    <select id="selectByUserIdAndSkuId" resultType="com.melonecom.model.entity.CartItem">
+        SELECT id        AS cartItemId,
+               user_id   AS userId,
+               sku_id    AS skuId,
+               quantity  AS quantity,
+               checked   AS checked,
+               create_time AS createTime,
+               update_time AS updateTime
+        FROM tb_cart_item
+        WHERE user_id = #{userId}
+          AND sku_id = #{skuId}
+        LIMIT 1
+    </select>
+
+    <update id="incrQuantity">
+        UPDATE tb_cart_item
+        SET quantity = quantity + #{delta}
+        WHERE user_id = #{userId}
+          AND sku_id = #{skuId}
+    </update>
+
+    <update id="setQuantity">
+        UPDATE tb_cart_item
+        SET quantity = #{quantity}
+        WHERE user_id = #{userId}
+          AND sku_id = #{skuId}
+    </update>
+
+    <update id="setChecked">
+        UPDATE tb_cart_item
+        SET checked = #{checked}
+        WHERE user_id = #{userId}
+          AND sku_id = #{skuId}
+    </update>
+
+    <update id="setCheckedAll">
+        UPDATE tb_cart_item
+        SET checked = #{checked}
+        WHERE user_id = #{userId}
+    </update>
+
+    <delete id="deleteByUserIdAndSkuId">
+        DELETE FROM tb_cart_item
+        WHERE user_id = #{userId}
+          AND sku_id = #{skuId}
+    </delete>
+
+    <delete id="deleteByUserIdAndSkuIds">
+        DELETE FROM tb_cart_item
+        WHERE user_id = #{userId}
+          AND sku_id IN
+        <foreach collection="skuIds" item="sid" open="(" separator="," close=")">
+            #{sid}
+        </foreach>
+    </delete>
+
+    <delete id="clearByUserId">
+        DELETE FROM tb_cart_item
+        WHERE user_id = #{userId}
+    </delete>
+
+    <select id="selectCheckedByUserId" resultType="com.melonecom.model.entity.CartItem">
+        SELECT id        AS cartItemId,
+               user_id   AS userId,
+               sku_id    AS skuId,
+               quantity  AS quantity,
+               checked   AS checked,
+               create_time AS createTime,
+               update_time AS updateTime
+        FROM tb_cart_item
+        WHERE user_id = #{userId}
+          AND checked = 1
+        ORDER BY update_time DESC, id DESC
+    </select>
+
+</mapper>
